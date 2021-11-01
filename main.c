@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "il.h"
-#include "il/io/to_png.h"
+#include "il/io/ilpng.h"
 
 #include "benchmark/mandelbrot.h"
 
@@ -16,11 +16,11 @@ int main() {
 
     timer *t = timer_new();
     timer_start(t);
-    array2ui8 *m = mandelbrot(x_left, x_right, y_bottom, y_top, depth, nx, ny);
+    array3ui8 *m = mandelbrot_color(x_left, x_right, y_bottom, y_top, depth, nx, ny);
     timer_stop(t);
     printf("Time to compute the Mandelbrot set: %fs\n", timer_time(t));
 
-    save_array2ui8_to_png(m, "mandelbrot.png");
+    save_array3ui8_to_png(m, "mandelbrot.png");
 
     return 0;
 }

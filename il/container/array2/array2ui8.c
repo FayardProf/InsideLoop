@@ -14,8 +14,8 @@ array2ui8 *array2ui8_new() {
     array2ui8 *m = malloc(sizeof(array2ui8));
     m->data = NULL;
     m->size[0] = 0;
-	m->size[1] = 0;
-	m->capacity[0] = 0;
+    m->size[1] = 0;
+    m->capacity[0] = 0;
     m->capacity[1] = 0;
     return m;
 }
@@ -66,8 +66,8 @@ int8_t array2ui8_get(array2ui8 *m, int i0, int i1) {
 }
 
 void array2ui8_set(array2ui8 *m, int i0, int i1, int8_t x) {
-    assert(i0 >= 0 && i0 < m->capacity[0]);
-    assert(i1 >= 0 && i1 < m->capacity[1]);
+    assert(i0 >= 0 && i0 < m->size[0]);
+    assert(i1 >= 0 && i1 < m->size[1]);
     m->data[i0 * m->capacity[1] + i1] = x;
 }
 

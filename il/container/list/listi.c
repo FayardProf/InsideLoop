@@ -120,7 +120,7 @@ nodei *listi_rend(listi *lst) {
 }
 
 nodei *listi_next(nodei *no) {
-	assert(no != NULL);
+    assert(no != NULL);
     return no->next;
 }
 

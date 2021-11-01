@@ -120,7 +120,7 @@ noded *listd_rend(listd *lst) {
 }
 
 noded *listd_next(noded *no) {
-	assert(no != NULL);
+    assert(no != NULL);
     return no->next;
 }
 

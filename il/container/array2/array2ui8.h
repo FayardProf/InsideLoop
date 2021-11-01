@@ -18,4 +18,4 @@ int8_t array2ui8_get(array2ui8 *m, int i0, int i1);
 void array2ui8_set(array2ui8 *m, int i0, int i1, int8_t x);
 int8_t *array2ui8_data(array2ui8 *m);
 
-#endif //IL_array2UI8_H
+#endif //IL_ARRAY32UI8_H

@@ -14,5 +14,6 @@
 // save_array2ui8_to_png(m, "mandelbrot.png");
 
 array2ui8 *mandelbrot(float x_left, float x_right, float y_bottom, float y_top, int depth, int nx, int ny);
+array3ui8 *mandelbrot_color(float x_left, float x_right, float y_bottom, float y_top, int depth, int nx, int ny);
 
 #endif //IL_MANDELBROT_H

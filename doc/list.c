@@ -1,7 +1,7 @@
 #include "mpilib.h"
 
 void doc_list() {
-		int n = 10;
+        int n = 10;
 
     listd *lst = listd_new();
     double x = 0.123456789123456789;
