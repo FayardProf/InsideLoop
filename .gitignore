@@ -3,3 +3,5 @@ main
 main.dSYM
 .vscode
 *.png
+.idea
+cmake-build-debug

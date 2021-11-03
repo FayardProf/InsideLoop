@@ -1,26 +1,20 @@
 #include <stdio.h>
 
 #include "il.h"
-#include "il/io/ilpng.h"
-
-#include "benchmark/mandelbrot.h"
 
 int main() {
-    float x_left = -1.5;
-    float x_right = 0.5;
-    float y_bottom = -1.0;
-    float y_top = 1.0;
-    int depth = 255;
-    int nx = 8000;
-    int ny = 8000;
+    int n = 32;
 
-    timer *t = timer_new();
-    timer_start(t);
-    array3ui8 *m = mandelbrot_color(x_left, x_right, y_bottom, y_top, depth, nx, ny);
-    timer_stop(t);
-    printf("Time to compute the Mandelbrot set: %fs\n", timer_time(t));
+    seti *s = seti_new();
+    for (int i = 0; i < n; i++) {
+        seti_add(s, i);
+    }
 
-    save_array3ui8_to_png(m, "mandelbrot.png");
+    for (int i = seti_begin(s); i != seti_end(s); i = seti_next(s, i)) {
+        printf("%d\n", seti_value(s, i));
+    }
+
+    seti_delete(s);
 
     return 0;
 }

@@ -387,6 +387,105 @@ static inline void listd_erase(listd *lst, noded *no) {
     }
 }
 
+typedef struct arrayb_t arrayb;
+
+struct arrayb_t {
+    bool *data;
+    int size;
+    int capacity;
+};
+
+static inline arrayb *arrayb_new() {
+    arrayb *v = malloc(sizeof(arrayb));
+    v->data = NULL;
+    v->size = 0;
+    v->capacity = 0;
+    return v;
+}
+
+static inline void arrayb_delete(arrayb *v) {
+    if (v->data != NULL) {
+        free(v->data);
+    }
+    free(v);
+}
+
+static inline bool arrayb_empty(arrayb *v) {
+    return v->size == 0;
+}
+
+static inline int arrayb_size(arrayb *v) {
+    return v->size;
+}
+
+static inline void _arrayb_increase_capacity(arrayb* v, int r) {
+    assert(v->capacity < r);
+    bool *new_data = malloc(r * sizeof(bool));
+    if (v->data != NULL) {
+        for (int i = 0; i < v->size; i++) {
+            new_data[i] = v->data[i];
+        }
+        free(v->data);
+    }
+    v->data = new_data;
+    v->capacity = r;
+}
+
+static inline void arrayb_resize(arrayb* v, int n) {
+    if (n > v->capacity) {
+        _arrayb_increase_capacity(v, n);
+    }
+    v->size = n;
+}
+
+static inline void arrayb_reserve(arrayb* v, int r) {
+    assert(r >= 0);
+
+    if (r > v->capacity) {
+        _arrayb_increase_capacity(v, r);
+    }
+}
+
+static inline bool arrayb_get(arrayb *v, int i) {
+    assert(i >= 0 && i < v->size);
+    return v->data[i];
+}
+
+static inline void arrayb_set(arrayb *v, int i, bool x) {
+    assert(i >= 0 && i < v->size);
+    v->data[i] = x;
+}
+
+static inline void arrayb_swap(arrayb *v, int i, int j) {
+    assert(i >= 0 && i < v->size);
+    assert(j >= 0 && j < v->size);
+    bool x = v->data[i];
+    v->data[i] = v->data[j];
+    v->data[j] = x;
+}
+
+static inline void arrayb_push_back(arrayb *v, bool x) {
+    int n = v->size;
+    int r = v->capacity;
+    if (r == n) {
+        int new_r = (n == 0) ? 1 : 2 * n;
+        _arrayb_increase_capacity(v, new_r);
+    }
+    v->data[n] = x;
+    v->size++;
+}
+
+static inline bool arrayb_pop_back(arrayb *v) {
+    assert(v->size > 0);
+    v->size--;
+    int i = v->size;
+    return v->data[i];
+}
+
+static inline bool *arrayb_data(arrayb *v) {
+    return v->data;
+}
+
 typedef struct arrayi_t arrayi;
 
 struct arrayi_t {
@@ -741,6 +840,303 @@ static inline void array3ui8_set(array3ui8 *m, int i0, int i1, int i2, int8_t x)
     assert(i1 >= 0 && i1 < m->size[1]);
     assert(i2 >= 0 && i2 < m->size[2]);
     m->data[(i0 * m->capacity[1] + i1) * m->capacity[2] + i2] = x;
+}
+
+#define IL_EMPTY 0
+#define IL_TOMBSTONE 1
+#define IL_OCCUPIED 2
+
+typedef struct setd_t setd;
+typedef struct sbucketd_t sbucketd;
+
+struct setd_t {
+    sbucketd *bucket;
+    int nb_elements;
+    int nb_tombstones;
+    int p;
+};
+
+struct sbucketd_t {
+    uint8_t flag;
+    double value;
+};
+
+static inline unsigned int hashd(double x, int p) {
+    unsigned int mask = (1 << p) - 1;
+    unsigned int i = (unsigned int) x;
+    i &= mask;
+    return i;
+}
+
+static inline setd *setd_new() {
+    setd *s = malloc(sizeof(setd));
+    s->bucket = NULL;
+    s->nb_elements = 0;
+    s->nb_tombstones = 0;
+    s->p = -1;
+    return s;
+}
+
+static inline void setd_delete(setd *s) {
+    if (s->bucket != NULL) {
+        free(s->bucket);
+    }
+    free(s);
+}
+
+static inline bool setd_empty(setd *s) {
+    return s->nb_elements == 0;
+}
+
+static inline int _setd_nb_buckets(int p) {
+    return (p >= 0) ? (1 << p) : 0;
+}
+
+// void setd_remove(setd *s, double x);
+
+static inline int setd_search(setd *s, double x) {
+    if (s->p == -1) {
+        return -1;
+    }
+    unsigned int mask = (1 << s->p) - 1;
+    unsigned int i = hashd(x, s->p);
+    int tombstone_i = -1;
+    int delta_i = 1;
+    while (true) {
+        if (s->bucket[i].flag == IL_EMPTY) {
+            return -(1 + (int) ((tombstone_i == -1) ? i : tombstone_i));
+        } else if (s->bucket[i].flag == IL_TOMBSTONE) {
+            tombstone_i = i;
+        } else if (s->bucket[i].value == x) {
+            return (int) i;
+        }
+        i += delta_i;
+        i &= mask;
+        delta_i++;
+    }
+}
+
+static inline bool setd_found(int i) {
+    return i >= 0;
+}
+
+static inline void _setd_reserve(setd *s, int p);
+
+static inline int setd_add_at(setd *s, int i, double x) {
+    i = -(1 + i);
+    int m = _setd_nb_buckets(s->p);
+    if (4 * (s->nb_elements + 1) > 3 * m) {
+        _setd_reserve(s, (s->p == -1) ? 1 : s->p + 1);
+        int j = setd_search(s, x);
+        i = - (1 + j);
+    }
+    s->bucket[i].flag = IL_OCCUPIED;
+    s->bucket[i].value = x;
+    s->nb_elements++;
+    return i;
+}
+
+static inline void _setd_reserve(setd *s, int p) {
+    sbucketd *old_bucket = s->bucket;
+    int old_m = _setd_nb_buckets(s->p);
+    int m = _setd_nb_buckets(p);
+    s->bucket = malloc(m * sizeof(sbucketd));
+    for (int i = 0; i < m; i++) {
+        s->bucket[i].flag = IL_EMPTY;
+    }
+    s->nb_elements = 0;
+    s->nb_tombstones = 0;
+    s->p = p;
+    if (p >= 0) {
+        for (int i = 0; i < old_m; i++) {
+            if (old_bucket[i].flag != IL_EMPTY &&
+                old_bucket[i].flag != IL_TOMBSTONE) {
+                int new_i = setd_search(s, old_bucket[i].value);
+                setd_add_at(s, new_i, old_bucket[i].value);
+            }
+        }
+        free(old_bucket);
+    }
+}
+
+// static inline void setd_remove_at(setd *s, int i);
+
+static inline bool setd_contains(setd *s, double x) {
+    return setd_search(s, x) >= 0;
+}
+
+static inline void setd_add(setd *s, double x) {
+    int i = setd_search(s, x);
+    if (i < 0) {
+        setd_add_at(s, i, x);
+    }
+}
+
+static inline int setd_next(setd *s, int i) {
+    int m = 1 << s->p;
+    i++;
+    while (i < m && (s->bucket[i].flag == IL_EMPTY ||
+                     s->bucket[i].flag == IL_TOMBSTONE)) {
+        i++;
+    }
+    return i;
+}
+
+static inline int setd_begin(setd *s) {
+    return setd_next(s, -1);
+}
+
+static inline int setd_end(setd *s) {
+    return 1 << s->p;
+}
+
+static inline double setd_value(setd *s, int i) {
+    return s->bucket[i].value;
+}
+
+typedef struct sbucketi_t sbucketi;
+typedef struct seti_t seti;
+
+struct seti_t {
+    sbucketi *bucket;
+    int nb_elements;
+    int nb_tombstones;
+    int p;
+};
+
+struct sbucketi_t {
+    uint8_t flag;
+    int value;
+};
+
+static inline unsigned int hashi(int x, int p) {
+    unsigned int knuth = 2654435769;
+    return (x * knuth) >> (32 - p);
+}
+
+static inline seti *seti_new() {
+    seti *s = malloc(sizeof(seti));
+    s->bucket = NULL;
+    s->nb_elements = 0;
+    s->nb_tombstones = 0;
+    s->p = -1;
+    return s;
+}
+
+static inline void seti_delete(seti *s) {
+    if (s->bucket != NULL) {
+        free(s->bucket);
+    }
+    free(s);
+}
+
+static inline bool seti_empty(seti *s) {
+    return s->nb_elements == 0;
+}
+
+static inline int _seti_nb_buckets(int p) {
+    return (p >= 0) ? (1 << p) : 0;
+}
+
+// void seti_remove(seti *s, int x);
+
+static inline int seti_search(seti *s, int x) {
+    if (s->p == -1) {
+        return -1;
+    }
+    unsigned int mask = (1 << s->p) - 1;
+    unsigned int i = hashi(x, s->p);
+    int tombstone_i = -1;
+    int delta_i = 1;
+    while (true) {
+        if (s->bucket[i].flag == IL_EMPTY) {
+            return -(1 + (int) ((tombstone_i == -1) ? i : tombstone_i));
+        } else if (s->bucket[i].flag == IL_TOMBSTONE) {
+            tombstone_i = i;
+        } else if (s->bucket[i].value == x) {
+            return (int) i;
+        }
+        i += delta_i;
+        i &= mask;
+        delta_i++;
+    }
+}
+
+static inline bool seti_found(int i) {
+    return i >= 0;
+}
+
+static inline void _seti_reserve(seti *s, int p);
+
+static inline int seti_add_at(seti *s, int i, int x) {
+    i = -(1 + i);
+    int m = _seti_nb_buckets(s->p);
+    if (4 * (s->nb_elements + 1) > 3 * m) {
+        _seti_reserve(s, (s->p == -1) ? 1 : s->p + 1);
+        int j = seti_search(s, x);
+        i = - (1 + j);
+    }
+    s->bucket[i].flag = IL_OCCUPIED;
+    s->bucket[i].value = x;
+    s->nb_elements++;
+    return i;
+}
+
+static inline void _seti_reserve(seti *s, int p) {
+    sbucketi *old_bucket = s->bucket;
+    int old_m = _seti_nb_buckets(s->p);
+    int m = _seti_nb_buckets(p);
+    s->bucket = malloc(m * sizeof(sbucketi));
+    for (int i = 0; i < m; i++) {
+        s->bucket[i].flag = IL_EMPTY;
+    }
+    s->nb_elements = 0;
+    s->nb_tombstones = 0;
+    s->p = p;
+    if (p >= 0) {
+        for (int i = 0; i < old_m; i++) {
+            if (old_bucket[i].flag != IL_EMPTY &&
+                old_bucket[i].flag != IL_TOMBSTONE) {
+                int new_i = seti_search(s, old_bucket[i].value);
+                seti_add_at(s, new_i, old_bucket[i].value);
+            }
+        }
+        free(old_bucket);
+    }
+}
+
+static inline bool seti_contains(seti *s, int x) {
+    return seti_search(s, x) >= 0;
+}
+
+static inline void seti_add(seti *s, int x) {
+    int i = seti_search(s, x);
+    if (i < 0) {
+        seti_add_at(s, i, x);
+    }
+}
+// void seti_remove_at(seti *s, int i);
+
+static inline int seti_end(seti *s) {
+    return 1 << s->p;
+}
+
+static inline int seti_next(seti *s, int i) {
+    int m = 1 << s->p;
+    i++;
+    while (i < m && (s->bucket[i].flag == IL_EMPTY ||
+                     s->bucket[i].flag == IL_TOMBSTONE)) {
+        i++;
+    }
+    return i;
+}
+
+static inline int seti_begin(seti *s) {
+    return seti_next(s, -1);
+}
+
+static inline int seti_value(seti *s, int i) {
+    return s->bucket[i].value;
 }
 
 #endif //IL_H
